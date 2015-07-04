@@ -105,7 +105,7 @@ class Converter(object):
                  ):
 
         self.n_features_per_channel = 3
-        extract_s_before = extract_s_after = 20
+        extract_s_before = extract_s_after = 30
 
         self.basename = basename
         self.kwik_path = basename + '.kwik'
@@ -245,6 +245,33 @@ class Converter(object):
 
         info("Kwik file successfully created!")
 
+    def template_explorer(self):
+        """Mini GUI to explore the templates."""
+
+        from phy.plot.waveforms import plot_waveforms
+        from vispy.app import run
+
+        p = c.probe['channel_groups'][1]['geometry']
+        positions = [p[channel] for channel in sorted(p)]
+
+        self._n = 0
+        w = plot_waveforms(waveforms=c.templates[self._n],
+                           masks=c.template_masks[self._n],
+                           channel_positions=positions,
+                           )
+
+        @w.connect
+        def on_key_press(e):
+            if e.key == 'space':
+                self._n += 1 if ('Shift' not in e.modifiers) else -1
+                print("Template {}.".format(self._n))
+            w.set_data(waveforms=c.templates[self._n],
+                       masks=c.template_masks[self._n],
+                       )
+            w.update()
+
+        run()
+
 
 if __name__ == '__main__':
 
@@ -254,14 +281,18 @@ if __name__ == '__main__':
     sample_rate = 25000
     dtype = 'uint16'
 
+    c = Converter(basename,
+                  n_channels=n_channels,
+                  prb_file=prb_file,
+                  sample_rate=sample_rate,
+                  dtype=dtype,
+                  )
+
+    c.template_explorer()
+    exit()
+
     if not os.path.exists(basename + '.kwik'):
         # Conversion.
-        c = Converter(basename,
-                      n_channels=n_channels,
-                      prb_file=prb_file,
-                      sample_rate=sample_rate,
-                      dtype=dtype,
-                      )
         c.create_kwik()
 
     # Try to open the kwik file after the conversion.
