@@ -1,3 +1,12 @@
+"""Conversion script from template matching files to Kwik.
+
+There are several improvements:
+
+* Don't load all features and masks in memory (need for KwikCreator to accept
+  features and masks as generators, not lists).
+
+"""
+
 import os
 import os.path as op
 import shutil
@@ -245,6 +254,7 @@ if __name__ == '__main__':
     sample_rate = 25000
     dtype = 'uint16'
 
+    # Conversion.
     c = Converter(basename,
                   n_channels=n_channels,
                   prb_file=prb_file,
@@ -253,5 +263,6 @@ if __name__ == '__main__':
                   )
     c.create_kwik()
 
+    # Try to open the kwik file after the conversion.
     model = KwikModel(c.kwik_path)
     model.describe()
