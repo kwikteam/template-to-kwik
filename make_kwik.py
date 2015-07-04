@@ -17,6 +17,7 @@ from phy.cluster.algorithms import SpikeDetekt
 from phy.electrode import load_probe
 from phy.io.h5 import open_h5
 from phy.io.kwik import create_kwik, KwikCreator, KwikModel
+from phy.utils.event import ProgressReporter
 from phy.traces.waveform import WaveformLoader, SpikeLoader
 from phy.utils.logging import info
 
@@ -140,6 +141,10 @@ class Converter(object):
         assert len(self.spike_clusters) == self.n_spikes
         info("Loaded {} spikes.".format(self.n_spikes))
 
+        # Chunks when computing features.
+        self.chunk_size = 2500
+        self.n_chunks = int(np.ceil(self.n_spikes / self.chunk_size))
+
         # Load templates and masks.
         self.templates, self.template_masks = _read_templates(basename)
         self.n_templates = len(self.templates)
@@ -161,11 +166,9 @@ class Converter(object):
         assert self.template_masks.shape == (self.n_templates, self.n_channels)
 
     def iter_spikes(self):
-        chunk_size = 1000
-        n_chunks = int(np.ceil(self.n_spikes / chunk_size))
-        for idx in range(0, n_chunks):
-            i = idx * chunk_size
-            j = (idx + 1) * chunk_size
+        for idx in range(0, self.n_chunks):
+            i = idx * self.chunk_size
+            j = (idx + 1) * self.chunk_size
             j_clip = min(j, self.n_spikes)
             yield (i, j_clip)
 
@@ -181,18 +184,25 @@ class Converter(object):
         return self.pcs
 
     def compute_features(self):
+        pr = ProgressReporter()
+        pr.set_progress_message('Computing features: {progress:.1f}%.')
+        pr.set_complete_message('All features computed.')
+        pr.value_max = self.n_chunks
+
         for i, j in self.iter_spikes():
             n = j - i
 
-            info("Extracting waveforms {} to {}...".format(i, j))
+            # info("Extracting waveforms {} to {}...".format(i, j))
             w = self.waveforms[i:j]
             assert w.shape == (n, self.n_samples_w, self.n_channels)
 
-            info("Computing features of spikes {} to {}...".format(i, j))
+            # info("Computing features of spikes {} to {}...".format(i, j))
             f = self._sd.features(w, self.pcs)
             assert f.shape == (n, self.n_channels, self.n_features_per_channel)
 
             yield f
+
+            pr.increment()
 
     def compute_masks(self):
         for i, j in self.iter_spikes():
@@ -307,8 +317,10 @@ if __name__ == '__main__':
                   dtype=dtype,
                   )
 
-    c.template_explorer('waveforms')  # 'waveforms' or 'templates'
-    exit()
+
+    # Uncomment to have a look at the templates or waveforms.
+    # c.template_explorer('waveforms')  # 'waveforms' or 'templates'
+    # exit()
 
     if not os.path.exists(basename + '.kwik'):
         # Conversion.
