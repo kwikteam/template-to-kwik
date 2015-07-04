@@ -245,7 +245,7 @@ class Converter(object):
 
         info("Kwik file successfully created!")
 
-    def template_explorer(self):
+    def template_explorer(self, name='templates'):
         """Mini GUI to explore the templates."""
 
         from phy.plot.waveforms import plot_waveforms
@@ -254,19 +254,21 @@ class Converter(object):
         p = c.probe['channel_groups'][1]['geometry']
         positions = [p[channel] for channel in sorted(p)]
 
-        self._n = 0
+        self._n = 2
         wave = np.zeros((0, self.n_samples_w, self.n_channels))
         w = plot_waveforms(channel_positions=positions,
                            waveforms=wave,
                            )
 
         # Show templates.
-        templates = self.templates
-        masks = self.template_masks
+        if name == 'templates':
+            templates = self.templates
+            masks = self.template_masks
 
         # Show waveforms.
-        # templates = self.waveforms
-        # masks = self.template_masks[self.spike_clusters]
+        elif name == 'waveforms':
+            templates = self.waveforms
+            masks = self.template_masks[self.spike_clusters]
 
         def _show_template(n):
             w.set_data(waveforms=templates[n],
@@ -277,7 +279,13 @@ class Converter(object):
         def on_key_press(e):
             if e.key == 'space':
                 self._n += 1 if ('Shift' not in e.modifiers) else -1
-                print("Template {}.".format(self._n))
+                if name == 'templates':
+                    info("Template {}.".format(self._n))
+                elif name == 'waveforms':
+                    sample = self.spike_samples[self._n]
+                    cluster = self.spike_clusters[self._n]
+                    info("Waveform {}, template={}, sample={}.".format(self._n,
+                         cluster, sample))
             _show_template(self._n)
 
         _show_template(self._n)
@@ -299,7 +307,7 @@ if __name__ == '__main__':
                   dtype=dtype,
                   )
 
-    c.template_explorer()
+    c.template_explorer('waveforms')  # 'waveforms' or 'templates'
     exit()
 
     if not os.path.exists(basename + '.kwik'):
