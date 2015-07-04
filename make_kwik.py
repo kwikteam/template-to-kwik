@@ -255,21 +255,27 @@ class Converter(object):
         positions = [p[channel] for channel in sorted(p)]
 
         self._n = 0
-        w = plot_waveforms(waveforms=c.templates[self._n],
-                           masks=c.template_masks[self._n],
-                           channel_positions=positions,
+        wave = np.zeros((0, self.n_samples_w, self.n_channels))
+        w = plot_waveforms(channel_positions=positions,
+                           waveforms=wave,
                            )
+
+        templates = self.templates
+        masks = self.template_masks
+
+        def _show_template(n):
+            w.set_data(waveforms=templates[n],
+                       masks=masks[n],
+                       )
 
         @w.connect
         def on_key_press(e):
             if e.key == 'space':
                 self._n += 1 if ('Shift' not in e.modifiers) else -1
                 print("Template {}.".format(self._n))
-            w.set_data(waveforms=c.templates[self._n],
-                       masks=c.template_masks[self._n],
-                       )
-            w.update()
+            _show_template(self._n)
 
+        _show_template(self._n)
         run()
 
 
