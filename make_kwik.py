@@ -260,8 +260,13 @@ class Converter(object):
                            waveforms=wave,
                            )
 
-        templates = self.templates
-        masks = self.template_masks
+        # Show templates.
+        # templates = self.templates
+        # masks = self.template_masks
+
+        # Show waveforms.
+        templates = self.waveforms
+        masks = self.template_masks[self.spike_clusters]
 
         def _show_template(n):
             w.set_data(waveforms=templates[n],
