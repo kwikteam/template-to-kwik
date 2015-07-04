@@ -268,6 +268,10 @@ class Converter(object):
         wave = np.zeros((0, self.n_samples_w, self.n_channels))
         w = plot_waveforms(channel_positions=positions,
                            waveforms=wave,
+                           overlap=True,
+                           alpha=1.,
+                           probe_scale=(1.9, 1.0),
+                           box_scale=(0.066, 0.01),
                            )
 
         # Show templates.
@@ -280,25 +284,28 @@ class Converter(object):
             templates = self.waveforms
             masks = self.template_masks[self.spike_clusters]
 
-        def _show_template(n):
-            w.set_data(waveforms=templates[n],
-                       masks=masks[n],
-                       )
-
         @w.connect
         def on_key_press(e):
             if e.key == 'space':
                 self._n += 1 if ('Shift' not in e.modifiers) else -1
                 if name == 'templates':
                     info("Template {}.".format(self._n))
+                    w.set_data(waveforms=templates[self._n],
+                               masks=masks[self._n],
+                               )
                 elif name == 'waveforms':
                     sample = self.spike_samples[self._n]
                     cluster = self.spike_clusters[self._n]
                     info("Waveform {}, template={}, sample={}.".format(self._n,
                          cluster, sample))
-            _show_template(self._n)
-
-        _show_template(self._n)
+                    wav = np.vstack((templates[self._n],
+                                     self.templates[cluster][:-1][None, ...]))
+                    m = np.vstack((masks[self._n],
+                                   self.template_masks[cluster][None, ...]))
+                    w.set_data(waveforms=wav,
+                               masks=m,
+                               spike_clusters=[0, 1],
+                               )
         run()
 
 
@@ -316,7 +323,6 @@ if __name__ == '__main__':
                   sample_rate=sample_rate,
                   dtype=dtype,
                   )
-
 
     # Uncomment to have a look at the templates or waveforms.
     # c.template_explorer('waveforms')  # 'waveforms' or 'templates'
