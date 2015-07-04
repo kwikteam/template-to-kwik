@@ -254,14 +254,15 @@ if __name__ == '__main__':
     sample_rate = 25000
     dtype = 'uint16'
 
-    # Conversion.
-    c = Converter(basename,
-                  n_channels=n_channels,
-                  prb_file=prb_file,
-                  sample_rate=sample_rate,
-                  dtype=dtype,
-                  )
-    c.create_kwik()
+    if not os.path.exists(basename + '.kwik'):
+        # Conversion.
+        c = Converter(basename,
+                      n_channels=n_channels,
+                      prb_file=prb_file,
+                      sample_rate=sample_rate,
+                      dtype=dtype,
+                      )
+        c.create_kwik()
 
     # Try to open the kwik file after the conversion.
     model = KwikModel(c.kwik_path)
