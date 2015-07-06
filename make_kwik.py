@@ -106,7 +106,8 @@ class Converter(object):
                  ):
 
         self.n_features_per_channel = 3
-        extract_s_before = extract_s_after = 30
+        extract_s_before = 50
+        extract_s_after = 80
 
         self.basename = basename
         self.kwik_path = basename + '.kwik'
@@ -151,10 +152,12 @@ class Converter(object):
         info("Loaded templates: {}.".format(self.templates.shape))
 
         # The WaveformLoader fetches waveforms from the raw traces dynamically.
+        channels = self.probe['channel_groups'][1]['channels']
         self._wl = WaveformLoader(traces=self.traces_f,
                                   n_samples=self.n_samples_w,
                                   dc_offset=32767.,
                                   scale_factor=.01,
+                                  channels=channels,
                                   )
         # A virtual (n_spikes, n_samples, n_channels) array that is
         # memmapped to the filtered data file.
@@ -314,7 +317,7 @@ if __name__ == '__main__':
     basename = 'checkerboard'
     prb_file = 'mea_252.prb'
     n_channels = 252
-    sample_rate = 25000
+    sample_rate = 10000
     dtype = 'uint16'
 
     c = Converter(basename,
