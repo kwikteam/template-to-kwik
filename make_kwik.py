@@ -234,8 +234,8 @@ class Converter(object):
         info("Computing features of all spikes...")
         # WARNING: watch out RAM usage here. We cannot use a generator because
         # the KwiKCreator only accepts lists at the moment.
-        features = [f for f in self.compute_features()]
-        masks = [m for m in self.compute_masks()]
+        features = (f for f in self.compute_features())
+        masks = (m for m in self.compute_masks())
 
         # Add spikes.
         info("Adding the spikes in the kwik file.")
