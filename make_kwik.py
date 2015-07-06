@@ -228,6 +228,11 @@ class Converter(object):
                     dtype=self.dtype,
                     nfeatures_per_channel=self.n_features_per_channel,
                     overwrite=True,
+
+                    # Waveform parameters.
+                    waveform_filter=False,
+                    waveform_dc_offset=32767.,
+                    waveform_scale_factor=.01,
                     )
 
         # Compute PCs and features.
@@ -297,17 +302,24 @@ class Converter(object):
                                masks=masks[self._n],
                                )
                 elif name == 'waveforms':
-                    sample = self.spike_samples[self._n]
-                    cluster = self.spike_clusters[self._n]
+                    cluster = -1
+                    while cluster != 14:
+                        self._n += 1 if ('Shift' not in e.modifiers) else -1
+                        sample = self.spike_samples[self._n]
+                        cluster = self.spike_clusters[self._n]
                     info("Waveform {}, template={}, sample={}.".format(self._n,
                          cluster, sample))
                     wav = np.vstack((templates[self._n],
-                                     self.templates[cluster][:-1][None, ...]))
+                                     # self.templates[cluster][:-1][None, ...],
+                                     ))
                     m = np.vstack((masks[self._n],
-                                   self.template_masks[cluster][None, ...]))
+                                   # self.template_masks[cluster][None, ...],
+                                   ))
                     w.set_data(waveforms=wav,
                                masks=m,
-                               spike_clusters=[0, 1],
+                               spike_clusters=[0,
+                                               # 1,
+                                               ],
                                )
         run()
 
