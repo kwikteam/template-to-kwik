@@ -232,10 +232,10 @@ class Converter(object):
         clu = self.spike_clusters[::k]
         masks = self.template_masks[clu]
 
-        w, m = self.waveformsk], masks
+        w, m = self.waveforms[::k], masks
         self.pcs = self._sd.waveform_pcs(w, m)
         return self.pcs
-[::
+
     def compute_features(self):
         pr = ProgressReporter()
         pr.set_progress_message('Computing features: {progress:.1f}%.')
