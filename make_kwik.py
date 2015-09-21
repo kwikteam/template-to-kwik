@@ -19,12 +19,13 @@ from phy.io.h5 import open_h5
 from phy.io.kwik import create_kwik, KwikCreator, KwikModel
 from phy.utils.event import ProgressReporter
 from phy.traces.waveform import WaveformLoader, SpikeLoader
+from phy.traces.filter import bandpass_filter, apply_filter
 from phy.utils.logging import info
 
 
-filename         = '20141202_allGT.dat' #Name of the file
-basename         = '20141202_allGT'     #Directory where all the results are stored
-prb_file         = 'kenneth.prb'      #Name of the mapping file, where it is located
+filename         = '/Users/nippoo/Development/neurodata/20141202_allGT/20141202_allGT.dat' #Name of the file
+basename         = '/Users/nippoo/Development/neurodata/20141202_allGT'     #Directory where all the results are stored
+prb_file         = '/Users/nippoo/Development/neurodata/20141202_allGT/kenneth.prb'      #Name of the mapping file, where it is located
 n_channels       = 120                #NUmber of active channels 
 n_total_channels = 129                #Number of channels
 sample_rate      = 25000              #Sampling rate
@@ -155,6 +156,11 @@ class Converter(object):
         self.n_total_channels = n_total_channels
         extract_s_before = extract_s_after = int(N_t - 1)/2
 
+        # Filtering parameters for PCA
+        filter_low = 500.
+        filter_high = 0.95 * .5 * sample_rate
+        filter_butter_order = 3
+
         self.basename = basename
         self.kwik_path = basename + '.kwik'
         self.dtype = dtype
@@ -198,17 +204,32 @@ class Converter(object):
         self.n_templates = len(self.templates)
         info("Loaded templates: {}.".format(self.templates.shape))
 
-        # The WaveformLoader fetches waveforms from the raw traces dynamically.
+        # The WaveformLoader fetches and filters waveforms from the raw traces dynamically.
+        n_samples = (extract_s_before, extract_s_after)
+        b_filter = bandpass_filter(rate=self.sample_rate,
+                                   low=filter_low,
+                                   high=filter_high,
+                                   order=filter_butter_order)
+
+        def filter(x):
+            return apply_filter(x, b_filter)
+
+        filter_margin = filter_butter_order * 3
+
         nodes            = []
         for key in self.probe['channel_groups'].keys():
           nodes += self.probe['channel_groups'][key]['channels']
         nodes    = np.sort(np.array(nodes, dtype=np.int32))
+
         self._wl = WaveformLoader(traces=self.traces_f,
-                                  n_samples=self.n_samples_w,
-                                  dc_offset=offset,
-                                  scale_factor=gain,
-                                  channels=nodes
-                                  )
+                                               n_samples=self.n_samples_w,
+                                               filter=filter,
+                                               filter_margin=filter_margin,
+                                               dc_offset=offset,
+                                               scale_factor=gain,
+                                               channels=nodes
+                                               )
+
         # A virtual (n_spikes, n_samples, n_channels) array that is
         # memmapped to the filtered data file.
         self.waveforms = SpikeLoader(self._wl, self.spike_samples)
