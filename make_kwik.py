@@ -36,7 +36,7 @@ gain             = 0.01
 
 
 def _read_spikes(basename):
-    with open_h5(basename + '/' + basename.split('/')[-1] + '.spiketimes.mat', 'r') as f:
+    with open_h5(basename + '.spiketimes.mat', 'r') as f:
         spike_samples = {}
         for name in f.children():
             cluster = int(name.split('_')[1])
@@ -55,7 +55,7 @@ def _read_spikes(basename):
 
 
 def _read_templates(basename, probe, n_total_channels, n_channels):
-    with open_h5(basename + '/' + basename.split('/')[-1] + '.templates.mat', 'r') as f:
+    with open_h5(basename + '.templates.mat', 'r') as f:
         templates = f.read('/templates')
         n_templates, n_samples, n_channels = templates.shape
         n_templates    //= 2
@@ -157,6 +157,7 @@ class Converter(object):
         extract_s_before = extract_s_after = int(N_t - 1)/2
 
         # Filtering parameters for PCA
+        unfiltered_data = True # set to False if your data is already pre-filtered (much quicker)
         filter_low = 500.
         filter_high = 0.95 * .5 * sample_rate
         filter_butter_order = 3
@@ -212,23 +213,26 @@ class Converter(object):
                                    order=filter_butter_order)
 
         def filter(x):
-            return apply_filter(x, b_filter)
+            if unfiltered_data:
+              return apply_filter(x, b_filter)
+            else:
+              return None
 
         filter_margin = filter_butter_order * 3
 
         nodes            = []
         for key in self.probe['channel_groups'].keys():
           nodes += self.probe['channel_groups'][key]['channels']
-        nodes    = np.sort(np.array(nodes, dtype=np.int32))
+        nodes    = np.array(nodes, dtype=np.int32)
 
         self._wl = WaveformLoader(traces=self.traces_f,
-                                               n_samples=self.n_samples_w,
-                                               filter=filter,
-                                               filter_margin=filter_margin,
-                                               dc_offset=offset,
-                                               scale_factor=gain,
-                                               channels=nodes
-                                               )
+                                  n_samples=self.n_samples_w,
+                                  filter=filter,
+                                  filter_margin=filter_margin,
+                                  dc_offset=offset,
+                                  scale_factor=gain,
+                                  channels=nodes
+                                  )
 
         # A virtual (n_spikes, n_samples, n_channels) array that is
         # memmapped to the filtered data file.
