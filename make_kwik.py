@@ -156,8 +156,10 @@ class Converter(object):
         self.n_total_channels = n_total_channels
         extract_s_before = extract_s_after = int(N_t - 1)/2
 
-        # Filtering parameters for PCA
-        unfiltered_data = True # set to False if your data is already pre-filtered (much quicker)
+        # set to True if your data is already pre-filtered (much quicker)
+        filtered_datfile = False
+
+        # Filtering parameters for PCA (these are ignored if filtered_datfile == True)
         filter_low = 500.
         filter_high = 0.95 * .5 * sample_rate
         filter_butter_order = 3
@@ -213,10 +215,7 @@ class Converter(object):
                                    order=filter_butter_order)
 
         def filter(x):
-            if unfiltered_data:
-              return apply_filter(x, b_filter)
-            else:
-              return None
+          return apply_filter(x, b_filter)
 
         filter_margin = filter_butter_order * 3
 
@@ -225,14 +224,22 @@ class Converter(object):
           nodes += self.probe['channel_groups'][key]['channels']
         nodes    = np.array(nodes, dtype=np.int32)
 
-        self._wl = WaveformLoader(traces=self.traces_f,
-                                  n_samples=self.n_samples_w,
-                                  filter=filter,
-                                  filter_margin=filter_margin,
-                                  dc_offset=offset,
-                                  scale_factor=gain,
-                                  channels=nodes
-                                  )
+        if filtered_datfile:
+          self._wl = WaveformLoader(traces=self.traces_f,
+                                    n_samples=self.n_samples_w,
+                                    dc_offset=offset,
+                                    scale_factor=gain,
+                                    channels=nodes
+                                    )
+        else:
+          self._wl = WaveformLoader(traces=self.traces_f,
+                                    n_samples=self.n_samples_w,
+                                    filter=filter,
+                                    filter_margin=filter_margin,
+                                    dc_offset=offset,
+                                    scale_factor=gain,
+                                    channels=nodes
+                                    )
 
         # A virtual (n_spikes, n_samples, n_channels) array that is
         # memmapped to the filtered data file.
