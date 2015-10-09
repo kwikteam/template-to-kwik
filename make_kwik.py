@@ -23,13 +23,13 @@ from phy.traces.filter import bandpass_filter, apply_filter
 from phy.utils.logging import info
 
 
-filename         = '/Users/nippoo/Development/neurodata/20141202_allGT/20141202_allGT.dat' #Name of the file
-basename         = '/Users/nippoo/Development/neurodata/20141202_allGT'     #Directory where all the results are stored
-prb_file         = '/Users/nippoo/Development/neurodata/20141202_allGT/kenneth.prb'      #Name of the mapping file, where it is located
-n_channels       = 120                #NUmber of active channels 
-n_total_channels = 129                #Number of channels
-sample_rate      = 25000              #Sampling rate
-N_t              = int(5*1e-3*sample_rate) #length of the template in time steps
+filename         = '/Users/nippoo/Development/neurodata/dan/silico_0.dat' #Name of the file
+basename         = '/Users/nippoo/Development/neurodata/dan/silico_0/silico_0'     #Directory where all the results are stored
+prb_file         = '/Users/nippoo/Development/neurodata/dan/dan.prb'      #Name of the mapping file, where it is located
+n_channels       = 30                 #Number of active channels 
+n_total_channels = 30                 #Number of channels
+sample_rate      = 20000              #Sampling rate
+N_t              = int(3*1e-3*sample_rate) #length of the template in time steps
 dtype            = 'int16'
 offset           = 0
 gain             = 0.01
@@ -107,7 +107,7 @@ def _truncate(fn, extension='.dat', offset=None, n_channels=None, itemsize=None,
         f = open(fn_copy, 'w')
         chunk_len = n_channels*chunk_size
         n_samples = N/chunk_len
-        for i in xrange(n_samples):
+        for i in range(n_samples):
             data = np.memmap(fn, dtype=dtype, offset=offset)
             f.write(data[i*chunk_len:(i+1)*chunk_len])
         f.close()
@@ -154,7 +154,7 @@ class Converter(object):
 
         self.n_features_per_channel = 3
         self.n_total_channels = n_total_channels
-        extract_s_before = extract_s_after = int(N_t - 1)/2
+        self.extract_s_after = self.extract_s_before = extract_s_before = extract_s_after = int(N_t - 1)//2
 
         # set to True if your data is already pre-filtered (much quicker)
         filtered_datfile = False
@@ -309,6 +309,8 @@ class Converter(object):
                     sample_rate=self.sample_rate,
                     dtype=self.dtype,
                     nfeatures_per_channel=self.n_features_per_channel,
+                    extract_s_after = self.extract_s_after,
+                    extract_s_before = self.extract_s_before,
                     overwrite=True,
                     )
 
@@ -329,8 +331,9 @@ class Converter(object):
         creator.add_clustering(group=1,
                                name='main',
                                spike_clusters=self.spike_clusters,
+                               template_waveforms=self.templates,
+                               template_masks=self.template_masks,
                                )
-
 
         # Add spikes.
         info("Adding the spikes in the kwik file.")
