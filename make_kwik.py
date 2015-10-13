@@ -97,8 +97,6 @@ def _read_amplitudes(basename, n_templates, n_spikes, spike_clusters):
         for i in range(n_templates):
             amplitudes_i = f.read('/temp_' + str(i))[0,...]
             amplitudes[spc[i]] = amplitudes_i
-
-    print(amplitudes)
     return amplitudes
 
 
