@@ -26,7 +26,7 @@ from phy.utils.logging import info
 filename         = '/Users/nippoo/Development/neurodata/dan/silico_0.dat' #Name of the file
 basename         = '/Users/nippoo/Development/neurodata/dan/silico_0/silico_0'     #Directory where all the results are stored
 prb_file         = '/Users/nippoo/Development/neurodata/dan/dan.prb'      #Name of the mapping file, where it is located
-n_channels       = 30                 #Number of active channels 
+n_channels       = 30                 #Number of active channels
 n_total_channels = 30                 #Number of channels
 sample_rate      = 20000              #Sampling rate
 N_t              = int(3*1e-3*sample_rate) #length of the template in time steps
@@ -87,15 +87,23 @@ def _read_templates(basename, probe, n_total_channels, n_channels):
                 masks[count, idx[inv_nodes[get_edges(nodes[i], probe['channel_groups'][key])]]] = 1
     return templates, masks
 
+def _read_amplitudes(basename, n_templates):
+    amplitudes = {}
+
+    with open_h5(basename + '.amplitudes.mat', 'r') as f:
+        for i in range(n_templates):
+            amplitudes[i] = f.read('/temp_' + str(i))[0,...]
+    return amplitudes
+
 
 def _truncate(fn, extension='.dat', offset=None, n_channels=None, itemsize=None, dtype=None, chunk_size=50000):
     """Eventually truncate a file at the end to ensure it has a correct shape.
     """
     data = np.memmap(fn, dtype=dtype, offset=offset)
     N    = data.shape[0]
-    
+
     if np.mod(N, n_channels) != 0:
-        
+
         fn_copy   = fn + extension
         N         = int(N/n_channels)
 
@@ -133,7 +141,7 @@ def _read_filtered(filename, n_channels=None, dtype=None):
     filename, shape = _truncate(fn,
                       offset=offset,
                       n_channels=n_channels,
-                      itemsize=dtype.itemsize, 
+                      itemsize=dtype.itemsize,
                       dtype=dtype)
     return filename, np.memmap(filename, dtype=dtype, offset=0, shape=shape)
 
@@ -171,6 +179,7 @@ class Converter(object):
         self.probe = load_probe(prb_file)
 
         self.sample_rate = sample_rate
+        self.filtered_datfile = filtered_datfile
 
         self._sd = SpikeDetekt(probe=self.probe,
                                n_features_per_channel=
@@ -206,6 +215,9 @@ class Converter(object):
         self.templates, self.template_masks = _read_templates(basename, self.probe, self.n_total_channels, self.n_channels)
         self.n_templates = len(self.templates)
         info("Loaded templates: {}.".format(self.templates.shape))
+
+        # Load amplitudes.
+        self.amplitudes = _read_amplitudes(basename, self.n_templates)
 
         # The WaveformLoader fetches and filters waveforms from the raw traces dynamically.
         n_samples = (extract_s_before, extract_s_after)
@@ -333,6 +345,7 @@ class Converter(object):
                                spike_clusters=self.spike_clusters,
                                template_waveforms=self.templates,
                                template_masks=self.template_masks,
+                               template_amplitudes = self.amplitudes,
                                )
 
         # Add spikes.
@@ -344,6 +357,10 @@ class Converter(object):
                            n_channels = self.n_channels,
                            n_features = 3
                            )
+
+        # Add template amplitudes. We add these to the .kwik file, not the
+        # .kwx, since they're lightweight enough that you can delete them
+        # afterwards!
 
 
         info("Kwik file successfully created!")
@@ -398,10 +415,10 @@ class Converter(object):
                     cluster = self.spike_clusters[self._n]
                     info("Waveform {}, template={}, sample={}.".format(self._n,
                          cluster, sample))
-                    
+
                     wav = np.vstack((templates[self._n],
                                      self.templates[cluster][:-1][None, ...]))
-                    
+
                     m = np.vstack((masks[self._n],
                                    self.template_masks[cluster][None, ...]))
                     w.set_data(waveforms=wav,
