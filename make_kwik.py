@@ -21,6 +21,7 @@ from phy.utils.event import ProgressReporter
 from phy.traces.waveform import WaveformLoader, SpikeLoader
 from phy.traces.filter import bandpass_filter, apply_filter
 from phy.utils.logging import info
+from phy.utils.array import _spikes_per_cluster
 
 
 filename         = '/Users/nippoo/Development/neurodata/dan/silico_0.dat' #Name of the file
@@ -87,12 +88,17 @@ def _read_templates(basename, probe, n_total_channels, n_channels):
                 masks[count, idx[inv_nodes[get_edges(nodes[i], probe['channel_groups'][key])]]] = 1
     return templates, masks
 
-def _read_amplitudes(basename, n_templates):
-    amplitudes = {}
+def _read_amplitudes(basename, n_templates, n_spikes, spike_clusters):
+    amplitudes = np.empty_like(spike_clusters, dtype=np.float32)
+    spike_ids = np.arange(n_spikes, dtype=np.int32)
+    spc = _spikes_per_cluster(spike_ids, spike_clusters)
 
     with open_h5(basename + '.amplitudes.mat', 'r') as f:
         for i in range(n_templates):
-            amplitudes[i] = f.read('/temp_' + str(i))[0,...]
+            amplitudes_i = f.read('/temp_' + str(i))[0,...]
+            amplitudes[spc[i]] = amplitudes_i
+
+    print(amplitudes)
     return amplitudes
 
 
@@ -217,7 +223,7 @@ class Converter(object):
         info("Loaded templates: {}.".format(self.templates.shape))
 
         # Load amplitudes.
-        self.amplitudes = _read_amplitudes(basename, self.n_templates)
+        self.amplitudes = _read_amplitudes(basename, self.n_templates, self.n_spikes, self.spike_clusters)
 
         # The WaveformLoader fetches and filters waveforms from the raw traces dynamically.
         n_samples = (extract_s_before, extract_s_after)
@@ -345,7 +351,7 @@ class Converter(object):
                                spike_clusters=self.spike_clusters,
                                template_waveforms=self.templates,
                                template_masks=self.template_masks,
-                               template_amplitudes = self.amplitudes,
+                               template_amplitudes=self.amplitudes,
                                )
 
         # Add spikes.
